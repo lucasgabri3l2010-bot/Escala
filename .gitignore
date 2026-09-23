@@ -1,0 +1,15 @@
+# deps
+node_modules/
+# next
+.next/
+out/
+# env
+.env*.local
+.env
+# logs
+*.log
+# os
+.DS_Store
+Thumbs.db
+# vercel
+.vercel/
