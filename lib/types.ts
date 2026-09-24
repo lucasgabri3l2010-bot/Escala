@@ -132,7 +132,9 @@ export interface HistoricoItem {
 
 export interface AppConfig {
   empresaNome: string;
-  prazoResposta: string; // HH:mm
+  prazoResposta: string; // legado — mantido para compatibilidade
+  prazoAlmoco: string; // limite para responder SIM no almoço
+  prazoNoite: string; // limite para responder SIM à noite / NÃO
   refeicaoPorPeriodo: Record<string, string>;
   tiposAlimentacao: string[];
   motivosPermanencia: string[];

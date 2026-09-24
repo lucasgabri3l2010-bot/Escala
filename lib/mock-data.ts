@@ -29,6 +29,8 @@ export const contasIniciais: Conta[] = [
 export const configInicial: AppConfig = {
   empresaNome: "Escala+",
   prazoResposta: "09:00",
+  prazoAlmoco: "11:35",
+  prazoNoite: "17:35",
   refeicaoPorPeriodo: { manha: "Café da manhã", almoco: "Marmita", tarde: "Lanche", noite: "Jantar" },
   tiposAlimentacao: ["Marmita", "Lanche", "Café da manhã", "Almoço", "Jantar", "Ceia"],
   motivosPermanencia: ["Hora extra", "Finalização de atividade", "Demanda do setor", "Cobertura de outro funcionário", "Reunião", "Manutenção", "Operação", "Outro"],

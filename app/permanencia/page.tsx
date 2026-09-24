@@ -2,7 +2,7 @@
 import React from "react";
 import { Shell } from "@/components/Shell";
 import { Alert, Anel, Badge, Button, Card, CardHeader, Field, Input, Modal, PageHeader, ProgressBar, SearchInput, Select } from "@/components/ui";
-import { alimentacaoDoDia, useApp, useFuncionarioMap, HOJE } from "@/lib/store";
+import { alimentacaoDoDia, prazosResposta, useApp, useFuncionarioMap, HOJE } from "@/lib/store";
 import { useToastPush } from "@/lib/hooks";
 import { agoraBR, formatarData, prazoEncerrado, uid } from "@/lib/utils";
 import { Check, X, Timer, Sun, MoonStar } from "lucide-react";
@@ -44,9 +44,13 @@ export default function PermanenciaPage() {
     push("Permanência aprovada novamente.");
   }
 
-  const prazo = state.config.prazoResposta;
-  const encerrado = prazoEncerrado(prazo);
-  const podeEditar = !encerrado || state.user.cargo !== "Funcionário";
+  const { almoco: prazoAlmoco, noite: prazoNoite } = prazosResposta(state.config);
+  const almocoAberto = !prazoEncerrado(prazoAlmoco);
+  const noiteAberta = !prazoEncerrado(prazoNoite);
+  const eStaff = state.user.cargo === "Funcionário";
+  const podeAlmoco = almocoAberto || !eStaff;
+  const podeNoite = noiteAberta || !eStaff;
+  const statusPrazo = almocoAberto && noiteAberta ? "abertos" : !almocoAberto && !noiteAberta ? "encerrados" : "parcial";
   const meuId = state.user.funcionarioId;
   const minha = meuId ? state.declaracoes.find((d) => d.funcionarioId === meuId && d.data === data) : undefined;
 
@@ -70,7 +74,8 @@ export default function PermanenciaPage() {
 
   function abrir(v: boolean) {
     if (!meuId) { push("Sua conta não está vinculada a um funcionário.", "erro"); return; }
-    if (!podeEditar) { push("Prazo encerrado. Resposta bloqueada.", "erro"); return; }
+    if (v && !podeAlmoco && !podeNoite) { push("Prazos encerrados. Resposta bloqueada.", "erro"); return; }
+    if (!v && !podeNoite) { push(`Prazo encerrado (${prazoNoite}). Resposta bloqueada.`, "erro"); return; }
     setVaiFicar(v);
     setPeriodo(minha?.periodo ?? "");
     setMotivo(minha?.motivo && minha.motivo !== "Outro" ? minha.motivo : "");
@@ -83,11 +88,14 @@ export default function PermanenciaPage() {
     if (!meuId) return;
     if (vaiFicar) {
       if (!periodo) { setErro("Escolha Almoço ou Noite."); return; }
+      if (periodo === "Almoço" && !podeAlmoco) { setErro(`Prazo do almoço encerrado (${prazoAlmoco}).`); return; }
+      if (periodo === "Noite" && !podeNoite) { setErro(`Prazo da noite encerrado (${prazoNoite}).`); return; }
       if (!motivo) { setErro("Selecione o motivo. É obrigatório para confirmar SIM."); return; }
       if (motivo === "Outro" && !outro.trim()) { setErro("Descreva o motivo no campo 'Informe o motivo'."); return; }
       dispatch({ type: "DECLARAR", d: { id: minha?.id ?? uid("d"), funcionarioId: meuId, data, vaiFicar: true, periodo, motivo, motivoDetalhe: motivo === "Outro" ? outro.trim() : undefined, respondidoEm: agoraBR() } });
       push(`Registrado: você fica ${periodo === "Almoço" ? "no almoço (marmita)" : "à noite (lanche)"}.`);
     } else {
+      if (!podeNoite) { push(`Prazo encerrado (${prazoNoite}). Resposta bloqueada.`, "erro"); return; }
       dispatch({ type: "DECLARAR", d: { id: minha?.id ?? uid("d"), funcionarioId: meuId, data, vaiFicar: false, periodo: null, respondidoEm: agoraBR() } });
       push("Registrado: você não vai ficar.", "info");
     }
@@ -95,11 +103,11 @@ export default function PermanenciaPage() {
   }
 
   return (
-    <Shell titulo="Permanência" descricao={`Quem fica ${formatarData(data)} • Prazo ${prazo}`}>
+    <Shell titulo="Permanência" descricao={`Quem fica ${formatarData(data)} • Almoço até ${prazoAlmoco} • Noite até ${prazoNoite}`}>
       <PageHeader
         titulo="Quem vai ficar?"
-        descricao={encerrado ? "Prazo encerrado — a equipe não pode mais alterar" : `Prazo aberto até ${prazo}`}
-        acoes={<span className={`chip ${encerrado ? "bg-red-50 text-red-700 border border-red-200" : "bg-emerald-50 text-emerald-700 border border-emerald-200"}`}><Timer size={13} /> {encerrado ? "Prazo encerrado" : "Prazo aberto"}</span>}
+        descricao={statusPrazo === "abertos" ? `Prazos abertos: almoço até ${prazoAlmoco}, noite até ${prazoNoite}` : statusPrazo === "encerrados" ? "Prazos encerrados — a equipe não pode mais alterar" : `Prazo do almoço encerrado — ainda dá para responder à noite (até ${prazoNoite})`}
+        acoes={<span className={`chip ${statusPrazo === "encerrados" ? "bg-red-50 text-red-700 border border-red-200" : "bg-emerald-50 text-emerald-700 border border-emerald-200"}`}><Timer size={13} /> {statusPrazo === "abertos" ? "Prazos abertos" : statusPrazo === "encerrados" ? "Prazos encerrados" : "Só noite aberta"}</span>}
       />
 
       <div className="grid lg:grid-cols-3 gap-4 mb-4">
@@ -113,10 +121,11 @@ export default function PermanenciaPage() {
               <div className="mt-3"><Alert tipo="erro"><b>Permanência negada pelo administrador.</b><br />Motivo: {minha.motivoNegacao ?? "—"}</Alert></div>
             )}
             <div className="grid grid-cols-2 gap-2.5 mt-5">
-              <Button size="lg" className="!rounded-2xl" onClick={() => abrir(true)} disabled={!podeEditar}><Check size={18} /> SIM, VOU FICAR</Button>
-              <Button size="lg" variant="outline" className="!rounded-2xl" onClick={() => abrir(false)} disabled={!podeEditar}><X size={18} /> NÃO VOU</Button>
+              <Button size="lg" className="!rounded-2xl" onClick={() => abrir(true)} disabled={!podeAlmoco && !podeNoite}><Check size={18} /> SIM, VOU FICAR</Button>
+              <Button size="lg" variant="outline" className="!rounded-2xl" onClick={() => abrir(false)} disabled={!podeNoite}><X size={18} /> NÃO VOU</Button>
             </div>
-            {!podeEditar && <div className="mt-3"><Alert tipo="erro">Bloqueado. Peça ao administrador para alterar.</Alert></div>}
+            <p className="text-[11px] text-zinc-400 mt-2">Almoço até {prazoAlmoco} • Noite e NÃO até {prazoNoite}</p>
+            {(!podeAlmoco || !podeNoite) && <div className="mt-3"><Alert tipo="erro">Prazo encerrado. Peça ao administrador para alterar.</Alert></div>}
           </Card>
         ) : (
           <Card className="p-6">
@@ -212,8 +221,8 @@ export default function PermanenciaPage() {
             <div>
               <p className="label mb-2">Quando você vai ficar?</p>
               <div className="grid grid-cols-2 gap-2.5">
-                <button onClick={() => { setPeriodo("Almoço"); setErro(""); }} className={`flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl border-2 font-bold text-sm transition ${periodo === "Almoço" ? "border-brand-600 bg-brand-50 text-brand-800" : "border-zinc-200 text-zinc-500 hover:border-zinc-300"}`}><Sun size={17} /> Almoço<span className="text-[11px] font-medium opacity-70">marmita</span></button>
-                <button onClick={() => { setPeriodo("Noite"); setErro(""); }} className={`flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl border-2 font-bold text-sm transition ${periodo === "Noite" ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-200 text-zinc-500 hover:border-zinc-300"}`}><MoonStar size={17} /> Noite<span className="text-[11px] font-medium opacity-70">lanche</span></button>
+                <button disabled={!podeAlmoco} onClick={() => { setPeriodo("Almoço"); setErro(""); }} className={`flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl border-2 font-bold text-sm transition ${periodo === "Almoço" ? "border-brand-600 bg-brand-50 text-brand-800" : "border-zinc-200 text-zinc-500 hover:border-zinc-300"} disabled:opacity-40`}><Sun size={17} /> Almoço<span className="text-[11px] font-medium opacity-70">marmita • até {prazoAlmoco}</span></button>
+                <button disabled={!podeNoite} onClick={() => { setPeriodo("Noite"); setErro(""); }} className={`flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl border-2 font-bold text-sm transition ${periodo === "Noite" ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-200 text-zinc-500 hover:border-zinc-300"} disabled:opacity-40`}><MoonStar size={17} /> Noite<span className="text-[11px] font-medium opacity-70">lanche • até {prazoNoite}</span></button>
               </div>
             </div>
             <Field label="Motivo (obrigatório)" erro={erro}>

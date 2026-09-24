@@ -24,7 +24,8 @@ export default function ConfigPage() {
         )}
         {aba === "Permanência" && (
           <div className="space-y-3">
-            <Field label="Prazo para responder (HH:mm)"><Input type="time" value={cfg.prazoResposta} onChange={(e) => setCfg({ ...cfg, prazoResposta: e.target.value })} /></Field>
+            <Field label="Prazo do almoço (HH:mm)"><Input type="time" value={cfg.prazoAlmoco ?? cfg.prazoResposta} onChange={(e) => setCfg({ ...cfg, prazoAlmoco: e.target.value })} /></Field>
+            <Field label="Prazo da noite e do NÃO (HH:mm)"><Input type="time" value={cfg.prazoNoite ?? "17:35"} onChange={(e) => setCfg({ ...cfg, prazoNoite: e.target.value })} /></Field>
             <Field label="Motivos (separados por vírgula)"><Input value={cfg.motivosPermanencia.join(", ")} onChange={(e) => setCfg({ ...cfg, motivosPermanencia: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })} /></Field>
             <p className="text-xs text-zinc-500">Antes do prazo o funcionário pode alterar. Depois, a resposta bloqueia e só Administrador/Supervisor altera manualmente.</p>
           </div>

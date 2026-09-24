@@ -283,6 +283,14 @@ export interface ResumoSetor {
   total: number;
 }
 
+// Prazos de resposta por período, com compatibilidade com o formato antigo.
+export function prazosResposta(config: AppConfig): { almoco: string; noite: string } {
+  return {
+    almoco: config.prazoAlmoco ?? config.prazoResposta ?? "11:35",
+    noite: config.prazoNoite ?? "17:35"
+  };
+}
+
 // Regra fixa: Almoço = marmita, Noite = lanche. Sem escolha de refeição.
 export function alimentacaoDoDia(declaracoes: Declaracao[], funcionarios: Funcionario[], setores: Setor[], data: string): { marmitas: number; lanches: number; total: number; lista: { nome: string; periodo: string; motivo: string }[]; porSetor: ResumoSetor[] } {
   const conf = declaracoes.filter((d) => d.data === data && d.vaiFicar === true && d.moderacao !== "Negada");
