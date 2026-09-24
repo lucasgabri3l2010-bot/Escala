@@ -22,6 +22,11 @@ export default function LoginPage() {
   const [nome, setNome] = React.useState("");
   const [setorId, setSetorId] = React.useState("");
 
+  // Quem já está logado não fica na tela de login
+  React.useEffect(() => {
+    if (state.logado) router.replace(state.user.cargo === "Funcionário" ? "/permanencia" : "/dashboard");
+  }, [state.logado, state.user.cargo, router]);
+
   React.useEffect(() => {
     if (aba === "Criar conta" && !setorId && state.setores[0]) setSetorId(state.setores[0].id);
     // eslint-disable-next-line react-hooks/exhaustive-deps

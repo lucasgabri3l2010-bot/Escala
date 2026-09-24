@@ -7,6 +7,7 @@ import { agoraBR, uid } from "./utils";
 
 interface State {
   user: Usuario;
+  logado: boolean;
   funcionarios: Funcionario[];
   setores: Setor[];
   escalas: Escala[];
@@ -57,7 +58,8 @@ type Action =
   | { type: "HYDRATE"; s: State };
 
 const initialState: State = {
-  user: { nome: "Administrador", email: "admin@escala.plus", cargo: "Administrador" },
+  user: { nome: "", email: "", cargo: "Funcionário" },
+  logado: false,
   funcionarios: funcionariosIniciais,
   setores: setoresIniciais,
   escalas: escalasIniciais,
@@ -84,9 +86,9 @@ function pushNot(s: State, titulo: string, descricao: string, tipo: string): Not
 function reducer(s: State, a: Action): State {
   switch (a.type) {
     case "LOGIN":
-      return { ...s, user: a.user };
+      return { ...s, user: a.user, logado: true };
     case "LOGOUT":
-      return { ...s, user: { nome: "Visitante", email: "", cargo: "Funcionário" } };
+      return { ...s, user: { nome: "", email: "", cargo: "Funcionário" as const }, logado: false };
     case "HYDRATE":
       return { ...initialState, ...a.s };
     case "ADD_FUNC":
@@ -188,6 +190,7 @@ function reducer(s: State, a: Action): State {
         contas: [a.conta, ...s.contas],
         funcionarios: [a.funcionario, ...s.funcionarios],
         user: { nome: a.conta.nome, email: a.conta.email, cargo: a.conta.cargo, funcionarioId: a.conta.funcionarioId },
+        logado: true,
         historico: pushHist(s, a.conta.nome, "criou conta", "Funcionários", `${a.conta.nome} entrou para a equipe`)
       };
     case "DECLARAR": {

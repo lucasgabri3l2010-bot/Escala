@@ -41,7 +41,7 @@ const MENU: { grupo: string; itens: { href: string; nome: string; icone: React.R
 
 export function Sidebar({ recolhida, setRecolhida, mobileAberta, setMobileAberta }: { recolhida: boolean; setRecolhida: (v: boolean) => void; mobileAberta: boolean; setMobileAberta: (v: boolean) => void }) {
   const path = usePathname();
-  const { state } = useApp();
+  const { state, dispatch } = useApp();
   const router = useRouter();
   const [perfil, setPerfil] = React.useState(false);
   const naoLidas = state.notificacoes.filter((n) => !n.lida).length;
@@ -106,7 +106,7 @@ export function Sidebar({ recolhida, setRecolhida, mobileAberta, setMobileAberta
         {!recolhida && perfil && (
           <div className="absolute bottom-full left-3 right-3 mb-2 bg-white border border-zinc-200 rounded-2xl shadow-pop overflow-hidden animate-fadeUp">
             <button onClick={() => { setPerfil(false); router.push("/configuracoes"); }} className="w-full flex items-center gap-2.5 px-4 py-3 text-sm hover:bg-zinc-50"><User size={15} className="text-zinc-400" /> Meu perfil</button>
-            <button onClick={() => { setPerfil(false); router.push("/login"); }} className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-red-600 hover:bg-red-50 border-t border-zinc-100"><LogOut size={15} /> Sair</button>
+            <button onClick={() => { setPerfil(false); dispatch({ type: "LOGOUT" }); router.push("/login"); }} className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-red-600 hover:bg-red-50 border-t border-zinc-100"><LogOut size={15} /> Sair</button>
           </div>
         )}
       </div>
