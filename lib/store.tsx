@@ -47,6 +47,8 @@ type Action =
   | { type: "ADD_NOT"; n: Notificacao }
   | { type: "ADD_HIST"; h: HistoricoItem }
   | { type: "SET_CONFIG"; c: AppConfig }
+  | { type: "SET_CARDAPIO"; foto: string }
+  | { type: "REMOVE_CARDAPIO" }
   | { type: "FINALIZAR_ALIM"; data: string }
   | { type: "HYDRATE"; s: State };
 
@@ -168,6 +170,10 @@ function reducer(s: State, a: Action): State {
       return { ...s, historico: [a.h, ...s.historico] };
     case "SET_CONFIG":
       return { ...s, config: a.c, historico: pushHist(s, s.user.nome, "alterou configurações", "Configurações", "Configurações atualizadas") };
+    case "SET_CARDAPIO":
+      return { ...s, config: { ...s.config, cardapioFoto: a.foto, cardapioAtualizadoEm: agoraBR() }, historico: pushHist(s, s.user.nome, "publicou cardápio", "Alimentação", "Foto do cardápio das marmitas atualizada") };
+    case "REMOVE_CARDAPIO":
+      return { ...s, config: { ...s.config, cardapioFoto: null, cardapioAtualizadoEm: null }, historico: pushHist(s, s.user.nome, "removeu cardápio", "Alimentação", "Foto do cardápio das marmitas removida") };
     case "FINALIZAR_ALIM":
       return { ...s, alimentacaoFinalizada: { ...s.alimentacaoFinalizada, [a.data]: true }, historico: pushHist(s, s.user.nome, "alterou quantidade de refeições", "Alimentação", `Alimentação de ${a.data} finalizada`) };
     default:
@@ -176,7 +182,7 @@ function reducer(s: State, a: Action): State {
 }
 
 const Ctx = createContext<{ state: State; dispatch: React.Dispatch<Action> } | null>(null);
-const KEY = "escala-plus-v1";
+const KEY = "escala-plus-v2";
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);

@@ -106,6 +106,22 @@ export default function DashboardPage() {
             <Link href="/alimentacao"><Button variant="outline" size="sm" className="w-full mt-3">Ver controle de alimentação</Button></Link>
           </Card>
 
+          <Card className="p-5">
+            <h3 className="font-bold">Cardápio das marmitas</h3>
+            {state.config.cardapioFoto ? (
+              <Link href="/alimentacao" className="block mt-3 group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={state.config.cardapioFoto} alt="Cardápio das marmitas" className="w-full h-36 object-cover rounded-xl border border-zinc-200 group-hover:border-brand-300 transition" />
+                <p className="text-xs text-zinc-400 mt-2">Publicado em {state.config.cardapioAtualizadoEm ?? "—"} • toque para ampliar</p>
+              </Link>
+            ) : (
+              <div className="mt-2">
+                <p className="text-[13px] text-zinc-400">Nenhum cardápio publicado ainda.</p>
+                <Link href="/alimentacao" className="mt-2 inline-flex items-center gap-1 text-[13px] font-bold text-brand-700 hover:underline">Publicar foto <ArrowRight size={14} /></Link>
+              </div>
+            )}
+          </Card>
+
           <Card className="overflow-hidden">
             <CardHeader titulo="Plantões de hoje" subtitulo={`${plantoesDia.length} registros`} acao={<Link href="/plantoes" className="text-xs font-bold text-brand-700 hover:underline">Ver todos</Link>} />
             <div className="p-3 space-y-2">
@@ -126,6 +142,7 @@ export default function DashboardPage() {
       <Card className="mt-4 overflow-hidden">
         <CardHeader titulo="Atividades recentes" subtitulo="Últimas movimentações da operação" acao={<Link href="/historico" className="text-[13px] font-bold text-brand-700 hover:underline inline-flex items-center gap-1">Ver histórico <ArrowRight size={14} /></Link>} />
         <div className="p-5 grid md:grid-cols-2 gap-x-8 gap-y-4">
+          {state.historico.length === 0 && <p className="text-[13px] text-zinc-400 md:col-span-2">Sem atividades ainda. As movimentações aparecem aqui.</p>}
           {state.historico.slice(0, 6).map((h) => (
             <div key={h.id} className="flex gap-3">
               <div className="w-9 h-9 rounded-xl bg-zinc-100 text-zinc-500 flex items-center justify-center shrink-0">

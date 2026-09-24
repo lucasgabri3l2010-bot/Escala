@@ -136,6 +136,9 @@ export interface AppConfig {
   refeicaoPorPeriodo: Record<string, string>;
   tiposAlimentacao: string[];
   motivosPermanencia: string[];
+  responsavelMarmitas: string;
+  cardapioFoto: string | null;
+  cardapioAtualizadoEm: string | null;
 }
 
 export interface Usuario {

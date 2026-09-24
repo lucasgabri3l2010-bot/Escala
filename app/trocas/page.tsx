@@ -17,6 +17,7 @@ export default function TrocasPage() {
     if (!form.solicitanteId || !form.envolvidoId || !form.motivo.trim()) { show("Preencha envolvidos e motivo."); return; }
     if (form.solicitanteId === form.envolvidoId) { show("Envolvido deve ser outra pessoa."); return; }
     const esc = state.escalas.find((e) => e.funcionarioId === form.solicitanteId);
+    if (!esc) { show("O solicitante ainda não possui escala cadastrada."); return; }
     dispatch({ type: "ADD_TROCA", t: { id: uid("t"), escalaOriginalId: esc?.id ?? "e-001", ...form, status: "Pendente", criadaEm: agoraBR() } });
     setModal(false); show("Solicitação de troca criada.");
   }
