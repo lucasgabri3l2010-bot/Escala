@@ -159,6 +159,8 @@ export interface Declaracao {
   motivo?: string;
   motivoDetalhe?: string;
   respondidoEm?: string;
+  moderacao?: "Aprovada" | "Negada";
+  motivoNegacao?: string;
 }
 
 export interface Conta {

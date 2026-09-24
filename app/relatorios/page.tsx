@@ -16,13 +16,13 @@ export default function RelatoriosPage() {
 
   function dadosCSV(): string[][] {
     if (tipo === "Escalas") return [["Funcionário", "Data", "Horário", "Tipo", "Status"], ...state.escalas.filter((e) => noPeriodo(e.data)).map((e) => [fmap[e.funcionarioId]?.nome ?? "", e.data, `${e.inicio}-${e.fim}`, e.tipo, e.status])];
-    if (tipo === "Permanências") return [["Funcionário", "Data", "Vai ficar", "Período", "Refeição", "Motivo"], ...state.declaracoes.filter((d) => noPeriodo(d.data)).map((d) => [fmap[d.funcionarioId]?.nome ?? "", d.data, d.vaiFicar ? "Sim" : "Não", String(d.periodo ?? "—"), d.vaiFicar ? (d.periodo === "Noite" ? "Lanche" : "Marmita") : "—", String(d.motivo ?? "")])];
+    if (tipo === "Permanências") return [["Funcionário", "Data", "Vai ficar", "Período", "Refeição", "Motivo", "Moderação"], ...state.declaracoes.filter((d) => noPeriodo(d.data)).map((d) => [fmap[d.funcionarioId]?.nome ?? "", d.data, d.vaiFicar ? "Sim" : "Não", String(d.periodo ?? "—"), d.vaiFicar ? (d.periodo === "Noite" ? "Lanche" : "Marmita") : "—", String(d.motivo ?? ""), d.moderacao === "Negada" ? `Negada (${d.motivoNegacao ?? ""})` : "Aprovada"])];
     if (tipo === "Alimentação") { const l = alimentacaoDoDia(state.declaracoes, state.funcionarios, state.setores, ini); return [["Funcionário", "Período", "Refeição", "Motivo"], ...l.lista.map((x) => [x.nome, x.periodo, x.periodo === "Noite" ? "Lanche" : "Marmita", x.motivo])]; }
     if (tipo === "Trocas") return [["Solicitante", "Envolvido", "Nova data", "Status"], ...state.trocas.map((t) => [fmap[t.solicitanteId]?.nome ?? "", fmap[t.envolvidoId]?.nome ?? "", t.novaData, t.status])];
     return [["Módulo", "Qtd"], [tipo, "—"]];
   }
 
-  const perms = state.declaracoes.filter((d) => noPeriodo(d.data));
+  const perms = state.declaracoes.filter((d) => noPeriodo(d.data) && d.moderacao !== "Negada");
   const motivos: Record<string, number> = {};
   perms.filter((d) => d.vaiFicar).forEach((d) => { const m = `${d.periodo ?? "Almoço"} • ${String(d.motivo ?? "Outro")}`; motivos[m] = (motivos[m] ?? 0) + 1; });
   const totMot = Object.values(motivos).reduce((a, b) => a + b, 0);

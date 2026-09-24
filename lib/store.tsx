@@ -54,6 +54,7 @@ type Action =
   | { type: "REMOVE_CARDAPIO" }
   | { type: "SIGNUP"; conta: Conta; funcionario: Funcionario }
   | { type: "DECLARAR"; d: Declaracao }
+  | { type: "MODERAR"; funcionarioId: string; data: string; aprovada: boolean; motivoNegacao?: string }
   | { type: "FINALIZAR_ALIM"; data: string }
   | { type: "HYDRATE"; s: State };
 
@@ -196,8 +197,8 @@ function reducer(s: State, a: Action): State {
     case "DECLARAR": {
       const existe = s.declaracoes.some((d) => d.funcionarioId === a.d.funcionarioId && d.data === a.d.data);
       const declaracoes = existe
-        ? s.declaracoes.map((d) => (d.funcionarioId === a.d.funcionarioId && d.data === a.d.data ? a.d : d))
-        : [a.d, ...s.declaracoes];
+        ? s.declaracoes.map((d) => (d.funcionarioId === a.d.funcionarioId && d.data === a.d.data ? { ...a.d, moderacao: d.moderacao ?? "Aprovada", motivoNegacao: d.moderacao === "Negada" ? d.motivoNegacao : undefined } : d))
+        : [{ ...a.d, moderacao: "Aprovada" as const }, ...s.declaracoes];
       const nome = s.funcionarios.find((f) => f.id === a.d.funcionarioId)?.nome ?? s.user.nome;
       return {
         ...s,
@@ -208,6 +209,26 @@ function reducer(s: State, a: Action): State {
           a.d.vaiFicar ? "confirmou permanência" : "recusou permanência",
           "Permanência",
           a.d.vaiFicar ? `${a.d.periodo} • Motivo: ${a.d.motivo}` : "Não vai ficar"
+        )
+      };
+    }
+    case "MODERAR": {
+      const alvo = s.declaracoes.find((d) => d.funcionarioId === a.funcionarioId && d.data === a.data);
+      if (!alvo) return s;
+      const nome = s.funcionarios.find((f) => f.id === a.funcionarioId)?.nome ?? a.funcionarioId;
+      return {
+        ...s,
+        declaracoes: s.declaracoes.map((d) =>
+          d.funcionarioId === a.funcionarioId && d.data === a.data
+            ? { ...d, moderacao: a.aprovada ? ("Aprovada" as const) : ("Negada" as const), motivoNegacao: a.aprovada ? undefined : a.motivoNegacao }
+            : d
+        ),
+        historico: pushHist(
+          s,
+          s.user.nome || "Administrador",
+          a.aprovada ? "aprovou permanência" : "negou permanência",
+          "Permanência",
+          a.aprovada ? `${nome} liberado` : `${nome} negado • Motivo: ${a.motivoNegacao ?? "—"}`
         )
       };
     }
@@ -264,7 +285,7 @@ export interface ResumoSetor {
 
 // Regra fixa: Almoço = marmita, Noite = lanche. Sem escolha de refeição.
 export function alimentacaoDoDia(declaracoes: Declaracao[], funcionarios: Funcionario[], setores: Setor[], data: string): { marmitas: number; lanches: number; total: number; lista: { nome: string; periodo: string; motivo: string }[]; porSetor: ResumoSetor[] } {
-  const conf = declaracoes.filter((d) => d.data === data && d.vaiFicar === true);
+  const conf = declaracoes.filter((d) => d.data === data && d.vaiFicar === true && d.moderacao !== "Negada");
   const fmap: Record<string, Funcionario> = Object.fromEntries(funcionarios.map((f) => [f.id, f]));
   const marmitas = conf.filter((d) => d.periodo === "Almoço").length;
   const lanches = conf.filter((d) => d.periodo === "Noite").length;

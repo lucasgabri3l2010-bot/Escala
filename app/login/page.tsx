@@ -92,7 +92,7 @@ export default function LoginPage() {
             ))}
           </div>
         </div>
-        <p className="relative text-xs text-zinc-500">© {new Date().getFullYear()} Escala+ • Admin: admin@escala.plus / 123456</p>
+        <p className="relative text-xs text-zinc-500">© {new Date().getFullYear()} Escala+</p>
       </div>
       <div className="flex-1 flex items-center justify-center p-6">
         <div key={shake} className={`w-full max-w-[400px] bg-white border border-zinc-200/80 rounded-3xl shadow-card p-8 ${shake ? "animate-shake" : "animate-fadeUp"}`}>

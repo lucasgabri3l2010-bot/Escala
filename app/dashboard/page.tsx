@@ -23,7 +23,8 @@ export default function DashboardPage() {
   );
   const pg = usePagination(escalasDia.length, 6);
   const doDia = state.declaracoes.filter((d) => d.data === data);
-  const conf = doDia.filter((d) => d.vaiFicar).length;
+  const conf = doDia.filter((d) => d.vaiFicar && d.moderacao !== "Negada").length;
+  const neg = doDia.filter((d) => d.vaiFicar && d.moderacao === "Negada").length;
   const nao = doDia.filter((d) => !d.vaiFicar).length;
   const ativos = state.funcionarios.filter((f) => f.status === "Ativo").length;
   const pend = Math.max(0, ativos - doDia.length);
@@ -52,7 +53,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
         <Stat nome="Escalados hoje" valor={escalasDia.length} detalhe="funcionários escalados" delta="+6 vs ontem" icone={<Users size={18} />} />
         <Stat nome="Plantões ativos" valor={plantoesDia.length} detalhe="em andamento e agendados" delta="+2 vs ontem" icone={<MoonStar size={18} />} />
-        <Stat nome="Vão ficar" valor={conf} detalhe={`${pend} pendentes • ${nao} não vão`} delta={`${pend} a responder`} icone={<Clock3 size={18} />} />
+        <Stat nome="Vão ficar" valor={conf} detalhe={`${pend} pendentes • ${nao} não vão${neg > 0 ? ` • ${neg} negados` : ""}`} delta={`${pend} a responder`} icone={<Clock3 size={18} />} />
         <Stat nome="Refeições previstas" valor={alim.total} detalhe={`${alim.marmitas} marmitas • ${alim.lanches} lanches`} delta="auto" icone={<UtensilsCrossed size={18} />} />
       </div>
 
@@ -95,7 +96,7 @@ export default function DashboardPage() {
           <Card className="p-5">
             <div className="flex items-center gap-4">
               <Anel valor={conf} total={conf + nao + pend} />
-              <div><h3 className="font-bold text-zinc-900">Permanência</h3><p className="text-[13px] text-zinc-500 mt-0.5">{conf} confirmados<br />{nao} não ficarão • {pend} pendentes</p>
+              <div><h3 className="font-bold text-zinc-900">Permanência</h3><p className="text-[13px] text-zinc-500 mt-0.5">{conf} confirmados<br />{nao} não ficarão • {pend} pendentes{neg > 0 ? ` • ${neg} negados` : ""}</p>
               <Link href="/permanencia" className="mt-2 inline-flex items-center gap-1 text-[13px] font-bold text-brand-700 hover:underline">Responder / ver painel <ArrowRight size={14} /></Link></div>
             </div>
             <div className="mt-4"><ProgressBar valor={conf} total={conf + nao + pend} /></div>

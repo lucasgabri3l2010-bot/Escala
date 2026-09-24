@@ -22,6 +22,27 @@ export default function PermanenciaPage() {
   const [motivo, setMotivo] = React.useState("");
   const [outro, setOutro] = React.useState("");
   const [erro, setErro] = React.useState("");
+  const [negarAlvo, setNegarAlvo] = React.useState<string | null>(null);
+  const [motivoNegacao, setMotivoNegacao] = React.useState("");
+  const [erroNegar, setErroNegar] = React.useState("");
+
+  function negar(id: string) {
+    if (!motivoNegacao.trim()) { setErroNegar("Informe o motivo da negação. É obrigatório."); return; }
+    const alvo = doDia.find((d) => d.id === id);
+    if (!alvo) return;
+    dispatch({ type: "MODERAR", funcionarioId: alvo.funcionarioId, data: alvo.data, aprovada: false, motivoNegacao: motivoNegacao.trim() });
+    push("Permanência negada. A pessoa foi retirada da contagem.", "info");
+    setNegarAlvo(null);
+    setMotivoNegacao("");
+    setErroNegar("");
+  }
+
+  function aprovar(id: string) {
+    const alvo = doDia.find((d) => d.id === id);
+    if (!alvo) return;
+    dispatch({ type: "MODERAR", funcionarioId: alvo.funcionarioId, data: alvo.data, aprovada: true });
+    push("Permanência aprovada novamente.");
+  }
 
   const prazo = state.config.prazoResposta;
   const encerrado = prazoEncerrado(prazo);
@@ -30,7 +51,9 @@ export default function PermanenciaPage() {
   const minha = meuId ? state.declaracoes.find((d) => d.funcionarioId === meuId && d.data === data) : undefined;
 
   const doDia = state.declaracoes.filter((d) => d.data === data);
-  const sim = doDia.filter((d) => d.vaiFicar);
+  const eAdmin = state.user.cargo === "Administrador";
+  const sim = doDia.filter((d) => d.vaiFicar && d.moderacao !== "Negada");
+  const negadas = doDia.filter((d) => d.vaiFicar && d.moderacao === "Negada");
   const nao = doDia.filter((d) => !d.vaiFicar);
   const ativos = state.funcionarios.filter((f) => f.status === "Ativo");
   const responderam = new Set(doDia.map((d) => d.funcionarioId));
@@ -86,6 +109,9 @@ export default function PermanenciaPage() {
             <p className="text-[13px] text-zinc-500 mt-1">
               {minha ? (minha.vaiFicar ? `Sim, ${minha.periodo === "Almoço" ? "no almoço" : "à noite"} • ${minha.motivo === "Outro" ? minha.motivoDetalhe : minha.motivo}` : "Você respondeu que não vai ficar.") : "Toque em uma opção para responder."}
             </p>
+            {minha?.vaiFicar && minha.moderacao === "Negada" && (
+              <div className="mt-3"><Alert tipo="erro"><b>Permanência negada pelo administrador.</b><br />Motivo: {minha.motivoNegacao ?? "—"}</Alert></div>
+            )}
             <div className="grid grid-cols-2 gap-2.5 mt-5">
               <Button size="lg" className="!rounded-2xl" onClick={() => abrir(true)} disabled={!podeEditar}><Check size={18} /> SIM, VOU FICAR</Button>
               <Button size="lg" variant="outline" className="!rounded-2xl" onClick={() => abrir(false)} disabled={!podeEditar}><X size={18} /> NÃO VOU</Button>
@@ -133,7 +159,7 @@ export default function PermanenciaPage() {
         />
         <div className="overflow-auto">
           <table className="w-full min-w-[640px]">
-            <thead><tr><th className="table-th">Funcionário</th><th className="table-th">Setor</th><th className="table-th">Fica</th><th className="table-th">Refeição</th><th className="table-th">Motivo</th></tr></thead>
+            <thead><tr><th className="table-th">Funcionário</th><th className="table-th">Setor</th><th className="table-th">Fica</th><th className="table-th">Refeição</th><th className="table-th">Motivo</th>{eAdmin && <th className="table-th text-right">Moderação</th>}</tr></thead>
             <tbody>
               {lista.map((d) => {
                 const f = fmap[d.funcionarioId];
@@ -145,6 +171,11 @@ export default function PermanenciaPage() {
                     <td className="table-td"><Badge value={d.periodo ?? "Almoço"} dot /></td>
                     <td className="table-td text-xs font-semibold">{d.periodo === "Noite" ? "Lanche" : "Marmita"}</td>
                     <td className="table-td text-xs text-zinc-500 max-w-[240px] truncate">{d.motivo === "Outro" ? d.motivoDetalhe : d.motivo}</td>
+                    {eAdmin && (
+                      <td className="table-td text-right">
+                        <Button size="sm" variant="outline" onClick={() => { setNegarAlvo(d.id); setMotivoNegacao(""); setErroNegar(""); }}><X size={14} /> Negar</Button>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -152,6 +183,21 @@ export default function PermanenciaPage() {
           </table>
           {lista.length === 0 && <p className="p-8 text-center text-sm text-zinc-400">Ninguém confirmado com este filtro ainda.</p>}
         </div>
+        {eAdmin && negadas.length > 0 && (
+          <div className="px-5 py-4 border-t border-red-100 bg-red-50/50">
+            <p className="text-xs font-bold uppercase tracking-wider text-red-500">Negadas pelo administrador ({negadas.length})</p>
+            <div className="space-y-2 mt-2">
+              {negadas.map((d) => (
+                <div key={d.id} className="flex flex-wrap items-center gap-2 bg-white border border-red-100 rounded-xl px-3.5 py-2.5 text-sm">
+                  <b>{fmap[d.funcionarioId]?.nome}</b>
+                  <span className="text-zinc-400 text-xs">{d.periodo} • {d.motivo === "Outro" ? d.motivoDetalhe : d.motivo}</span>
+                  <span className="text-xs text-red-700 bg-red-50 border border-red-100 rounded-full px-2.5 py-1">Negada: {d.motivoNegacao}</span>
+                  <Button size="sm" variant="ghost" className="ml-auto" onClick={() => aprovar(d.id)}><Check size={14} /> Aprovar</Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {pendentes.length > 0 && (
           <div className="px-5 py-4 border-t border-zinc-100 bg-zinc-50/60">
             <p className="text-xs font-bold uppercase tracking-wider text-zinc-400">Ainda não responderam ({pendentes.length})</p>
@@ -185,6 +231,16 @@ export default function PermanenciaPage() {
             <div className="flex justify-end gap-2 mt-5"><Button variant="outline" onClick={() => setModal(false)}>Voltar</Button><Button variant="primary" onClick={confirmar}>Confirmar saída</Button></div>
           </div>
         )}
+      </Modal>
+
+      <Modal aberto={!!negarAlvo} titulo="Negar permanência" subtitulo="A pessoa sai da contagem de refeições" onFechar={() => setNegarAlvo(null)}>
+        <Field label="Motivo da negação (obrigatório)" erro={erroNegar}>
+          <Input value={motivoNegacao} onChange={(e) => { setMotivoNegacao(e.target.value); setErroNegar(""); }} placeholder="Ex: sem demanda no setor hoje" />
+        </Field>
+        <div className="flex justify-end gap-2 mt-5">
+          <Button variant="outline" onClick={() => setNegarAlvo(null)}>Voltar</Button>
+          <Button variant="danger" onClick={() => negarAlvo && negar(negarAlvo)}><X size={16} /> Confirmar negação</Button>
+        </div>
       </Modal>
     </Shell>
   );
