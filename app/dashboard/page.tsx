@@ -22,11 +22,12 @@ export default function DashboardPage() {
     [state.escalas, data, tipo, buscaDeb, fmap]
   );
   const pg = usePagination(escalasDia.length, 6);
-  const permsDia = state.permanencias.filter((p) => p.data === data);
-  const conf = permsDia.filter((p) => p.vaiFicar === true).length;
-  const nao = permsDia.filter((p) => p.vaiFicar === false).length;
-  const pend = permsDia.filter((p) => p.vaiFicar === null).length;
-  const alim = alimentacaoDoDia(state.permanencias, data, state.funcionarios);
+  const doDia = state.declaracoes.filter((d) => d.data === data);
+  const conf = doDia.filter((d) => d.vaiFicar).length;
+  const nao = doDia.filter((d) => !d.vaiFicar).length;
+  const ativos = state.funcionarios.filter((f) => f.status === "Ativo").length;
+  const pend = Math.max(0, ativos - doDia.length);
+  const alim = alimentacaoDoDia(state.declaracoes, state.funcionarios, state.setores, data);
   const plantoesDia = state.plantoes.filter((p) => p.data === data);
   const hora = new Date().getHours();
   const saudacao = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";

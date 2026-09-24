@@ -32,10 +32,7 @@ export default function ConfigPage() {
         {aba === "Alimentação" && (
           <div className="space-y-3">
             <Field label="Responsável pelas marmitas"><Input value={cfg.responsavelMarmitas} onChange={(e) => setCfg({ ...cfg, responsavelMarmitas: e.target.value })} placeholder="Ex: nome da responsável" /></Field>
-            <Field label="Tipos (separados por vírgula)"><Input value={cfg.tiposAlimentacao.join(", ")} onChange={(e) => setCfg({ ...cfg, tiposAlimentacao: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })} /></Field>
-            {Object.entries(cfg.refeicaoPorPeriodo).map(([k, v]) => (
-              <Field key={k} label={`Período: ${k}`}><Input value={v} onChange={(e) => setCfg({ ...cfg, refeicaoPorPeriodo: { ...cfg.refeicaoPorPeriodo, [k]: e.target.value } })} /></Field>
-            ))}
+            <p className="text-xs text-zinc-500">Regra fixa: quem fica no almoço recebe marmita, quem fica à noite recebe lanche. A foto do cardápio é publicada na página Alimentação, apenas pelo administrador.</p>
           </div>
         )}
         {aba === "Permissões" && (

@@ -145,4 +145,27 @@ export interface Usuario {
   nome: string;
   email: string;
   cargo: Role;
+  funcionarioId?: string;
+}
+
+export type PeriodoPermanencia = "Almoço" | "Noite";
+
+export interface Declaracao {
+  id: string;
+  funcionarioId: string;
+  data: string; // yyyy-mm-dd
+  vaiFicar: boolean;
+  periodo: PeriodoPermanencia | null; // null quando NÃO vai ficar
+  motivo?: string;
+  motivoDetalhe?: string;
+  respondidoEm?: string;
+}
+
+export interface Conta {
+  id: string;
+  nome: string;
+  email: string;
+  senha: string;
+  cargo: Role;
+  funcionarioId?: string;
 }

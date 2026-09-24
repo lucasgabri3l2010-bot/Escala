@@ -15,11 +15,9 @@ export default function AlimentacaoPage() {
   const [erro, setErro] = React.useState("");
   const inputRef = React.useRef<HTMLInputElement>(null);
 
-  const calc = alimentacaoDoDia(state.permanencias, data, state.funcionarios);
+  const calc = alimentacaoDoDia(state.declaracoes, state.funcionarios, state.setores, data);
   const finalizada = !!state.alimentacaoFinalizada[data];
-  const cafe = Math.round(calc.marmitas * 0.2);
-  const jantar = Math.round(calc.marmitas * 0.5);
-  const podeGerenciar = state.user.cargo !== "Funcionário";
+  const podeGerenciar = state.user.cargo === "Administrador";
   const foto = state.config.cardapioFoto;
 
   function finalizar() {
@@ -82,7 +80,7 @@ export default function AlimentacaoPage() {
                   Foto publicada{state.config.responsavelMarmitas ? ` por ${state.config.responsavelMarmitas}` : ""} em {state.config.cardapioAtualizadoEm ?? "—"}.
                   Confira as opções antes de confirmar sua permanência.
                 </p>
-                {!podeGerenciar && <p className="text-xs text-zinc-400 mt-3">A troca da foto é feita pela responsável das marmitas.</p>}
+                {!podeGerenciar && <p className="text-xs text-zinc-400 mt-3">A troca da foto é feita apenas pelo administrador.</p>}
               </div>
             </div>
           ) : (
@@ -98,26 +96,45 @@ export default function AlimentacaoPage() {
         </div>
       </Card>
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
-        {[{ n: "Marmitas", v: calc.marmitas }, { n: "Lanches", v: calc.lanches }, { n: "Café", v: cafe }, { n: "Jantar", v: jantar }, { n: "Total", v: calc.marmitas + calc.lanches + cafe + jantar }].map((c) => (
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        {[{ n: "Marmitas (almoço)", v: calc.marmitas }, { n: "Lanches (noite)", v: calc.lanches }, { n: "Total", v: calc.total }].map((c) => (
           <Card key={c.n} className="p-4 text-center"><p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">{c.n}</p><p className="text-3xl font-extrabold text-zinc-900 mt-1">{c.v}</p></Card>
         ))}
       </div>
+      <Card className="overflow-hidden mb-4">
+        <CardHeader titulo="Por setor" subtitulo="Quantas pessoas ficam em cada setor" />
+        <div className="overflow-auto">
+          <table className="w-full min-w-[480px]">
+            <thead><tr><th className="table-th">Setor</th><th className="table-th">Marmitas</th><th className="table-th">Lanches</th><th className="table-th">Total</th></tr></thead>
+            <tbody>
+              {calc.porSetor.map((s) => (
+                <tr key={s.setorId} className="table-row">
+                  <td className="table-td font-semibold"><span className="inline-flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full" style={{ background: s.cor }} />{s.nome}</span></td>
+                  <td className="table-td">{s.marmitas}</td>
+                  <td className="table-td">{s.lanches}</td>
+                  <td className="table-td font-bold">{s.total}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
       <div className="grid lg:grid-cols-2 gap-4">
         <Card className="p-4">
           <h3 className="font-bold mb-1">Alimentação de {formatarData(data)}</h3>
           <p className="text-sm text-zinc-500 mb-3">Contabiliza apenas quem respondeu <b>SIM, VOU FICAR</b>. Quem respondeu NÃO ou está pendente não entra no cálculo. Cancelamento de escala atualiza automaticamente.</p>
           <ul className="text-sm space-y-1.5 max-h-80 overflow-auto">
-            {calc.lista.map((l, i) => <li key={i} className="flex justify-between border border-zinc-100 rounded-lg px-3 py-2"><span>{l.nome}</span><span className="text-zinc-500 text-xs">{l.motivo}</span></li>)}
+            {calc.lista.map((l, i) => <li key={i} className="flex justify-between border border-zinc-100 rounded-lg px-3 py-2"><span>{l.nome} <span className="text-xs text-zinc-400">• {l.periodo}</span></span><span className="text-zinc-500 text-xs">{l.motivo}</span></li>)}
             {calc.lista.length === 0 && <li className="text-zinc-500">Ninguém confirmado para este dia.</li>}
           </ul>
         </Card>
         <Card className="p-4">
-          <h3 className="font-bold mb-2">Regras por período</h3>
+          <h3 className="font-bold mb-2">Regra da refeição</h3>
           <ul className="text-sm space-y-2">
-            {Object.entries(state.config.refeicaoPorPeriodo).map(([k, v]) => <li key={k} className="flex justify-between border-b border-zinc-50 pb-2"><span className="capitalize text-zinc-500">{k}</span><b>{v}</b></li>)}
+            <li className="flex justify-between border-b border-zinc-50 pb-2"><span className="text-zinc-500">Fica no almoço</span><b>Marmita</b></li>
+            <li className="flex justify-between border-b border-zinc-50 pb-2"><span className="text-zinc-500">Fica à noite</span><b>Lanche</b></li>
           </ul>
-          <p className="text-xs text-zinc-400 mt-3">Configure os tipos em Configurações → Alimentação. Tipos ativos: {state.config.tiposAlimentacao.join(", ")}</p>
+          <p className="text-xs text-zinc-400 mt-3">A refeição é automática pelo período. Não há escolha de tipo.</p>
         </Card>
       </div>
     </Shell>

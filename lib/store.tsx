@@ -1,8 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useMemo, useReducer } from "react";
-import { AppConfig, Cobertura, Escala, Funcionario, HistoricoItem, Notificacao, Permanencia, Plantao, Setor, Troca, Usuario } from "./types";
-import { HOJE, coberturasIniciais, configInicial, escalasIniciais, funcionariosIniciais, historicoInicial, notificacoesIniciais, permanenciasIniciais, plantoesIniciais, setoresIniciais, trocasIniciais } from "./mock-data";
+import { AppConfig, Cobertura, Conta, Declaracao, Escala, Funcionario, HistoricoItem, Notificacao, Permanencia, Plantao, Setor, Troca, Usuario } from "./types";
+import { HOJE, coberturasIniciais, configInicial, contasIniciais, escalasIniciais, funcionariosIniciais, historicoInicial, notificacoesIniciais, permanenciasIniciais, plantoesIniciais, setoresIniciais, trocasIniciais } from "./mock-data";
 import { agoraBR, uid } from "./utils";
 
 interface State {
@@ -18,6 +18,8 @@ interface State {
   historico: HistoricoItem[];
   config: AppConfig;
   alimentacaoFinalizada: Record<string, boolean>;
+  contas: Conta[];
+  declaracoes: Declaracao[];
 }
 
 type Action =
@@ -49,6 +51,8 @@ type Action =
   | { type: "SET_CONFIG"; c: AppConfig }
   | { type: "SET_CARDAPIO"; foto: string }
   | { type: "REMOVE_CARDAPIO" }
+  | { type: "SIGNUP"; conta: Conta; funcionario: Funcionario }
+  | { type: "DECLARAR"; d: Declaracao }
   | { type: "FINALIZAR_ALIM"; data: string }
   | { type: "HYDRATE"; s: State };
 
@@ -64,7 +68,9 @@ const initialState: State = {
   notificacoes: notificacoesIniciais,
   historico: historicoInicial,
   config: configInicial,
-  alimentacaoFinalizada: {}
+  alimentacaoFinalizada: {},
+  contas: contasIniciais,
+  declaracoes: []
 };
 
 function pushHist(s: State, usuario: string, acao: string, modulo: string, detalhe: string): HistoricoItem[] {
@@ -176,6 +182,32 @@ function reducer(s: State, a: Action): State {
       return { ...s, config: { ...s.config, cardapioFoto: null, cardapioAtualizadoEm: null }, historico: pushHist(s, s.user.nome, "removeu cardápio", "Alimentação", "Foto do cardápio das marmitas removida") };
     case "FINALIZAR_ALIM":
       return { ...s, alimentacaoFinalizada: { ...s.alimentacaoFinalizada, [a.data]: true }, historico: pushHist(s, s.user.nome, "alterou quantidade de refeições", "Alimentação", `Alimentação de ${a.data} finalizada`) };
+    case "SIGNUP":
+      return {
+        ...s,
+        contas: [a.conta, ...s.contas],
+        funcionarios: [a.funcionario, ...s.funcionarios],
+        user: { nome: a.conta.nome, email: a.conta.email, cargo: a.conta.cargo, funcionarioId: a.conta.funcionarioId },
+        historico: pushHist(s, a.conta.nome, "criou conta", "Funcionários", `${a.conta.nome} entrou para a equipe`)
+      };
+    case "DECLARAR": {
+      const existe = s.declaracoes.some((d) => d.funcionarioId === a.d.funcionarioId && d.data === a.d.data);
+      const declaracoes = existe
+        ? s.declaracoes.map((d) => (d.funcionarioId === a.d.funcionarioId && d.data === a.d.data ? a.d : d))
+        : [a.d, ...s.declaracoes];
+      const nome = s.funcionarios.find((f) => f.id === a.d.funcionarioId)?.nome ?? s.user.nome;
+      return {
+        ...s,
+        declaracoes,
+        historico: pushHist(
+          s,
+          nome,
+          a.d.vaiFicar ? "confirmou permanência" : "recusou permanência",
+          "Permanência",
+          a.d.vaiFicar ? `${a.d.periodo} • Motivo: ${a.d.motivo}` : "Não vai ficar"
+        )
+      };
+    }
     default:
       return s;
   }
@@ -218,15 +250,30 @@ export function useSetorMap(): Record<string, Setor> {
   return useMemo(() => Object.fromEntries(state.setores.map((x) => [x.id, x])), [state.setores]);
 }
 
-export function alimentacaoDoDia(permanencias: Permanencia[], data: string, funcionarios: Funcionario[]): { marmitas: number; lanches: number; total: number; lista: { nome: string; motivo: string }[] } {
-  const conf = permanencias.filter((p) => p.data === data && p.vaiFicar === true);
-  const lista = conf.map((p) => {
-    const f = funcionarios.find((x) => x.id === p.funcionarioId);
-    return { nome: f?.nome ?? p.funcionarioId, motivo: String(p.motivo ?? "") };
+export interface ResumoSetor {
+  setorId: string;
+  nome: string;
+  cor: string;
+  marmitas: number;
+  lanches: number;
+  total: number;
+}
+
+// Regra fixa: Almoço = marmita, Noite = lanche. Sem escolha de refeição.
+export function alimentacaoDoDia(declaracoes: Declaracao[], funcionarios: Funcionario[], setores: Setor[], data: string): { marmitas: number; lanches: number; total: number; lista: { nome: string; periodo: string; motivo: string }[]; porSetor: ResumoSetor[] } {
+  const conf = declaracoes.filter((d) => d.data === data && d.vaiFicar === true);
+  const fmap: Record<string, Funcionario> = Object.fromEntries(funcionarios.map((f) => [f.id, f]));
+  const marmitas = conf.filter((d) => d.periodo === "Almoço").length;
+  const lanches = conf.filter((d) => d.periodo === "Noite").length;
+  const lista = conf.map((d) => ({ nome: fmap[d.funcionarioId]?.nome ?? "—", periodo: d.periodo ?? "Almoço", motivo: String(d.motivo ?? "") }));
+  const porSetor: ResumoSetor[] = setores.map((s) => {
+    const ids = new Set(funcionarios.filter((f) => f.setorId === s.id).map((f) => f.id));
+    const dc = conf.filter((d) => ids.has(d.funcionarioId));
+    const m = dc.filter((d) => d.periodo === "Almoço").length;
+    const l = dc.filter((d) => d.periodo === "Noite").length;
+    return { setorId: s.id, nome: s.nome, cor: s.cor, marmitas: m, lanches: l, total: dc.length };
   });
-  const marmitas = conf.length;
-  const lanches = Math.round(conf.length * 0.75);
-  return { marmitas, lanches, total: marmitas + lanches, lista };
+  return { marmitas, lanches, total: marmitas + lanches, lista, porSetor };
 }
 
 export { HOJE };

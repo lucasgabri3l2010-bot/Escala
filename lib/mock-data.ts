@@ -1,4 +1,4 @@
-import { AppConfig, Cobertura, Escala, Funcionario, HistoricoItem, Notificacao, Permanencia, Plantao, Setor, Troca } from "./types";
+import { AppConfig, Cobertura, Conta, Escala, Funcionario, HistoricoItem, Notificacao, Permanencia, Plantao, Setor, Troca } from "./types";
 
 export const HOJE = "2026-09-23";
 
@@ -21,6 +21,10 @@ export const coberturasIniciais: Cobertura[] = [];
 export const trocasIniciais: Troca[] = [];
 export const notificacoesIniciais: Notificacao[] = [];
 export const historicoInicial: HistoricoItem[] = [];
+
+export const contasIniciais: Conta[] = [
+  { id: "u-admin", nome: "Administrador", email: "admin@escala.plus", senha: "123456", cargo: "Administrador" }
+];
 
 export const configInicial: AppConfig = {
   empresaNome: "Escala+",

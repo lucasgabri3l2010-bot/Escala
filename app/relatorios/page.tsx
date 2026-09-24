@@ -16,15 +16,15 @@ export default function RelatoriosPage() {
 
   function dadosCSV(): string[][] {
     if (tipo === "Escalas") return [["Funcionário", "Data", "Horário", "Tipo", "Status"], ...state.escalas.filter((e) => noPeriodo(e.data)).map((e) => [fmap[e.funcionarioId]?.nome ?? "", e.data, `${e.inicio}-${e.fim}`, e.tipo, e.status])];
-    if (tipo === "Permanências") return [["Funcionário", "Data", "Vai ficar", "Motivo"], ...state.permanencias.filter((p) => noPeriodo(p.data)).map((p) => [fmap[p.funcionarioId]?.nome ?? "", p.data, p.vaiFicar === null ? "Pendente" : p.vaiFicar ? "Sim" : "Não", String(p.motivo ?? "")])];
-    if (tipo === "Alimentação") { const l = alimentacaoDoDia(state.permanencias, ini, state.funcionarios); return [["Funcionário", "Motivo"], ...l.lista.map((x) => [x.nome, x.motivo])]; }
+    if (tipo === "Permanências") return [["Funcionário", "Data", "Vai ficar", "Período", "Refeição", "Motivo"], ...state.declaracoes.filter((d) => noPeriodo(d.data)).map((d) => [fmap[d.funcionarioId]?.nome ?? "", d.data, d.vaiFicar ? "Sim" : "Não", String(d.periodo ?? "—"), d.vaiFicar ? (d.periodo === "Noite" ? "Lanche" : "Marmita") : "—", String(d.motivo ?? "")])];
+    if (tipo === "Alimentação") { const l = alimentacaoDoDia(state.declaracoes, state.funcionarios, state.setores, ini); return [["Funcionário", "Período", "Refeição", "Motivo"], ...l.lista.map((x) => [x.nome, x.periodo, x.periodo === "Noite" ? "Lanche" : "Marmita", x.motivo])]; }
     if (tipo === "Trocas") return [["Solicitante", "Envolvido", "Nova data", "Status"], ...state.trocas.map((t) => [fmap[t.solicitanteId]?.nome ?? "", fmap[t.envolvidoId]?.nome ?? "", t.novaData, t.status])];
     return [["Módulo", "Qtd"], [tipo, "—"]];
   }
 
-  const perms = state.permanencias.filter((p) => noPeriodo(p.data));
+  const perms = state.declaracoes.filter((d) => noPeriodo(d.data));
   const motivos: Record<string, number> = {};
-  perms.filter((p) => p.vaiFicar).forEach((p) => { const m = String(p.motivo ?? "Outro"); motivos[m] = (motivos[m] ?? 0) + 1; });
+  perms.filter((d) => d.vaiFicar).forEach((d) => { const m = `${d.periodo ?? "Almoço"} • ${String(d.motivo ?? "Outro")}`; motivos[m] = (motivos[m] ?? 0) + 1; });
   const totMot = Object.values(motivos).reduce((a, b) => a + b, 0);
 
   return (
@@ -42,7 +42,7 @@ export default function RelatoriosPage() {
       <div className="grid lg:grid-cols-2 gap-4">
         <Card className="p-4">
           <h3 className="font-bold mb-2">Resumo de permanência ({formatarData(ini)} — {formatarData(fim)})</h3>
-          <p className="text-sm text-zinc-600">Ficaram: <b>{perms.filter((p) => p.vaiFicar).length}</b> • Não ficaram: <b>{perms.filter((p) => p.vaiFicar === false).length}</b> • Pendentes: <b>{perms.filter((p) => p.vaiFicar === null).length}</b></p>
+          <p className="text-sm text-zinc-600">Ficaram: <b>{perms.filter((d) => d.vaiFicar).length}</b> • Não ficaram: <b>{perms.filter((d) => !d.vaiFicar).length}</b> • Marmitas: <b>{perms.filter((d) => d.vaiFicar && d.periodo === "Almoço").length}</b> • Lanches: <b>{perms.filter((d) => d.vaiFicar && d.periodo === "Noite").length}</b></p>
           <div className="mt-3 space-y-2">
             {Object.entries(motivos).map(([m, q]) => { const pct = totMot ? Math.round((q / totMot) * 100) : 0; return (<div key={m}><div className="flex justify-between text-sm"><span>{m}</span><b>{pct}%</b></div><div className="h-2 bg-zinc-100 rounded-full mt-1"><div className="h-full bg-brand-600 rounded-full" style={{ width: `${pct}%` }} /></div></div>); })}
             {totMot === 0 && <p className="text-sm text-zinc-400">Sem motivos no período.</p>}

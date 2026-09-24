@@ -45,6 +45,9 @@ export function Sidebar({ recolhida, setRecolhida, mobileAberta, setMobileAberta
   const router = useRouter();
   const [perfil, setPerfil] = React.useState(false);
   const naoLidas = state.notificacoes.filter((n) => !n.lida).length;
+  const MENU_VISIVEL = state.user.cargo === "Funcionário"
+    ? MENU.map((g) => ({ ...g, itens: g.itens.filter((it) => ["/dashboard", "/permanencia", "/alimentacao"].includes(it.href)) })).filter((g) => g.itens.length > 0)
+    : MENU;
 
   const conteudo = (
     <div className="flex flex-col h-full">
@@ -58,7 +61,7 @@ export function Sidebar({ recolhida, setRecolhida, mobileAberta, setMobileAberta
         )}
       </div>
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
-        {MENU.map((g) => (
+        {MENU_VISIVEL.map((g) => (
           <div key={g.grupo}>
             {!recolhida && <p className="px-2.5 mb-1.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-zinc-400">{g.grupo}</p>}
             <div className="space-y-1">
